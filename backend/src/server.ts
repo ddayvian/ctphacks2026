@@ -114,7 +114,7 @@ app.post("/analyze", async (req, res) => {
 
   const userContent = [
     `Sender name: ${body.senderName ?? ""}`,
-    `Sender email: ${body.senderEmail}`,
+    `Sender email: ${body.senderEmail || "(not visible in the UI — judge from display name only)"}`,
     `Subject: ${body.subject ?? ""}`,
     `Body:\n${body.bodyText.slice(0, 4000)}`,
     `Links:\n${linksSummary}`,

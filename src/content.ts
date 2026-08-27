@@ -18,17 +18,24 @@ function requestAiAnalysis(bodyEl: HTMLElement, email: EmailData, key: string): 
       // Bail if the user has since opened a different email.
       if (key !== lastAnalyzedKey) return;
 
+      // Re-query rather than reuse the bodyEl captured above — by the time
+      // this async response arrives, Outlook may have already replaced that
+      // subtree with fresh React-rendered nodes, leaving the old reference
+      // detached from the document (banner would render but never be seen).
+      const currentBodyEl = findOpenMessageBody();
+      if (!currentBodyEl) return;
+
       if (chrome.runtime.lastError) {
-        renderAiError(bodyEl, chrome.runtime.lastError.message ?? "extension error");
+        renderAiError(currentBodyEl, chrome.runtime.lastError.message ?? "extension error");
         return;
       }
       if (!response || !response.ok || !response.result) {
-        renderAiError(bodyEl, response?.error ?? "no response");
+        renderAiError(currentBodyEl, response?.error ?? "no response");
         return;
       }
 
-      renderAiResult(bodyEl, response.result);
-      highlightLinks(bodyEl, response.result.flaggedLinks);
+      renderAiResult(currentBodyEl, response.result);
+      highlightLinks(currentBodyEl, response.result.flaggedLinks);
 
       const stored: StoredAnalysis = {
         ...response.result,
@@ -45,20 +52,36 @@ function requestAiAnalysis(bodyEl: HTMLElement, email: EmailData, key: string): 
   }
 }
 
+let lastLoggedFailure = "";
+
 function scanAndRender(): void {
   if (extensionContextLost) return;
 
   const bodyEl = findOpenMessageBody();
-  if (!bodyEl) return;
+  if (!bodyEl) {
+    if (lastLoggedFailure !== "no-body") {
+      lastLoggedFailure = "no-body";
+      console.log("[CatPhish] no message body container found on this page");
+    }
+    return;
+  }
 
   const email = extractOpenEmail();
-  if (!email) return;
+  if (!email) {
+    if (lastLoggedFailure !== "no-sender") {
+      lastLoggedFailure = "no-sender";
+      console.log("[CatPhish] found message body, but sender/subject extraction failed", bodyEl);
+    }
+    return;
+  }
+  lastLoggedFailure = "";
 
   // Avoid re-analyzing the same open email on every DOM mutation.
   const key = `${email.senderEmail}::${email.subject}`;
   if (key === lastAnalyzedKey) return;
   lastAnalyzedKey = key;
 
+  console.log("[CatPhish] extracted email, requesting AI analysis", email);
   requestAiAnalysis(bodyEl, email, key);
 }
 

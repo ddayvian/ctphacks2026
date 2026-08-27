@@ -13,7 +13,17 @@ function getOrCreateBanner(bodyEl: HTMLElement): HTMLElement {
   if (!banner) {
     banner = document.createElement("div");
     banner.id = BANNER_ID;
-    bodyEl.parentElement?.insertBefore(banner, bodyEl);
+    if (bodyEl.parentElement) {
+      bodyEl.parentElement.insertBefore(banner, bodyEl);
+    } else {
+      console.log("[CatPhish] bodyEl has no parentElement — inserting before bodyEl itself failed, appending to document.body instead", bodyEl);
+      document.body.prepend(banner);
+    }
+    console.log("[CatPhish] banner inserted", {
+      connected: banner.isConnected,
+      rect: banner.getBoundingClientRect(),
+      parent: banner.parentElement,
+    });
   }
   return banner;
 }

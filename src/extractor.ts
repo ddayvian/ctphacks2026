@@ -10,7 +10,8 @@ function detectClient(): MailClient {
   if (
     host.endsWith("outlook.live.com") ||
     host.endsWith("outlook.office.com") ||
-    host.endsWith("outlook.office365.com")
+    host.endsWith("outlook.office365.com") ||
+    host.endsWith("outlook.cloud.microsoft")
   ) {
     return "outlook";
   }

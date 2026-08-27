@@ -6,7 +6,11 @@ import { EmailData, EmailLink } from "../types";
 // best-effort, layered so a DOM tweak on Microsoft's end degrades gracefully
 // instead of breaking extraction outright.
 
-const BODY_SELECTORS = ['[id^="UniqueMessageBody"]', 'div[role="main"] div[aria-label="Message body"]'];
+const BODY_SELECTORS = [
+  '[data-test-id="MessageBodyContainer"]',
+  '[id^="UniqueMessageBody"]',
+  'div[role="main"] div[aria-label="Message body"]',
+];
 
 export function findOutlookBody(): HTMLElement | null {
   for (const selector of BODY_SELECTORS) {
@@ -39,11 +43,20 @@ function findSenderInfo(bodyEl: HTMLElement): { name: string; email: string } | 
   // single stable "from" attribute the way Gmail's span[email] does.
   const readingPane = bodyEl.closest<HTMLElement>('div[role="main"]') ?? document.body;
 
+  // The sender's display name is reliably available via the persona-card
+  // trigger's aria-label ("From: <name>") even when the email address isn't
+  // in the DOM at all yet — Outlook's LivePersonaCard component loads the
+  // actual address lazily, only once the card is opened.
+  let name: string | null = null;
+  const fromLabelEl = readingPane.querySelector<HTMLElement>('[aria-label^="From:"]');
+  if (fromLabelEl) {
+    name = fromLabelEl.getAttribute("aria-label")!.replace(/^From:\s*/, "").trim() || null;
+  }
+
   const mailtoLink = readingPane.querySelector<HTMLAnchorElement>('a[href^="mailto:"]');
   if (mailtoLink) {
     const email = mailtoLink.getAttribute("href")?.replace(/^mailto:/, "").split("?")[0] ?? "";
-    const name = mailtoLink.textContent?.trim() || email;
-    if (email) return { name, email };
+    if (email) return { name: name ?? mailtoLink.textContent?.trim() ?? email, email };
   }
 
   // Fall back to scanning title/aria-label attributes for an email address —
@@ -53,8 +66,7 @@ function findSenderInfo(bodyEl: HTMLElement): { name: string; email: string } | 
     const attr = el.getAttribute("title") ?? el.getAttribute("aria-label") ?? "";
     const match = attr.match(EMAIL_REGEX);
     if (match) {
-      const name = el.textContent?.trim() || match[0];
-      return { name, email: match[0] };
+      return { name: name ?? el.textContent?.trim() ?? match[0], email: match[0] };
     }
   }
 
@@ -65,9 +77,12 @@ function findSenderInfo(bodyEl: HTMLElement): { name: string; email: string } | 
   if (match) {
     const before = headerText.slice(Math.max(0, match.index! - 80), match.index);
     const nameMatch = before.match(/([A-Za-z][\w .,'-]{1,60})\s*<\s*$/);
-    const name = nameMatch ? nameMatch[1].trim() : match[0];
-    return { name, email: match[0] };
+    return { name: name ?? (nameMatch ? nameMatch[1].trim() : match[0]), email: match[0] };
   }
+
+  // No email address anywhere in the DOM (hidden behind the persona card) —
+  // still proceed on the display name alone rather than showing nothing.
+  if (name) return { name, email: "" };
 
   return null;
 }

@@ -12,32 +12,25 @@ export interface EmailData {
   links: EmailLink[];
 }
 
-export type Severity = "info" | "warning" | "danger";
-
-export interface RuleFinding {
-  id: string;
-  label: string;
-  detail: string;
-  severity: Severity;
-  points: number;
-  relatedHrefs?: string[];
-}
-
 export type Verdict = "safe" | "suspicious" | "dangerous";
 
-export interface AnalysisResult {
-  score: number;
+export interface FlaggedLink {
+  href: string;
   verdict: Verdict;
-  findings: RuleFinding[];
-  subject: string;
-  senderEmail: string;
-  analyzedAt: number;
+  reason: string;
 }
 
 export interface AiAnalysis {
   verdict: Verdict;
   score: number;
   explanation: string;
+  flaggedLinks: FlaggedLink[];
+}
+
+export interface StoredAnalysis extends AiAnalysis {
+  senderEmail: string;
+  subject: string;
+  analyzedAt: number;
 }
 
 export interface AnalyzeAiMessage {

@@ -22,8 +22,9 @@ interface AnalyzeRequestBody {
   links: EmailLink[];
 }
 
-const SYSTEM_INSTRUCTION =
-  "You are a phishing detection assistant. Analyze the given email and judge how likely it is to be a phishing attempt.";
+const SYSTEM_INSTRUCTION = `You are a phishing detection assistant. Analyze the given email and judge how likely it is to be a phishing attempt.
+
+Also classify every link listed under "Links" individually — how risky that specific destination is (safe, suspicious, or dangerous) and a short reason. Use the exact href string given so it can be matched back to the link in the email. If there are no links, return an empty array for flaggedLinks.`;
 
 const RESPONSE_SCHEMA = {
   type: "object",
@@ -31,8 +32,20 @@ const RESPONSE_SCHEMA = {
     verdict: { type: "string", enum: ["safe", "suspicious", "dangerous"] },
     score: { type: "integer" },
     explanation: { type: "string" },
+    flaggedLinks: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          href: { type: "string" },
+          verdict: { type: "string", enum: ["safe", "suspicious", "dangerous"] },
+          reason: { type: "string" },
+        },
+        required: ["href", "verdict", "reason"],
+      },
+    },
   },
-  required: ["verdict", "score", "explanation"],
+  required: ["verdict", "score", "explanation", "flaggedLinks"],
 };
 
 // Gemini's free tier returns 503 "high demand" fairly often. Retry a couple
@@ -50,6 +63,13 @@ function isTransient(error: unknown): boolean {
   return /503|504|UNAVAILABLE|DEADLINE_EXCEEDED|deadline|high demand|overloaded|timeout|timed out|aborted|ETIMEDOUT/i.test(
     message
   );
+}
+
+// Quota exhaustion is per-model — retrying the same model wastes time, so
+// skip straight to the next model in MODELS_IN_ORDER instead of backing off.
+function isQuotaExceeded(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /429|RESOURCE_EXHAUSTED|quota/i.test(message);
 }
 
 async function generateWithFallback(userContent: string) {
@@ -70,6 +90,7 @@ async function generateWithFallback(userContent: string) {
         });
       } catch (error) {
         lastError = error;
+        if (isQuotaExceeded(error)) break; // move straight to the next model
         if (!isTransient(error)) throw error;
         if (attempt < RETRY_DELAYS_MS.length) await sleep(RETRY_DELAYS_MS[attempt]);
       }
@@ -133,5 +154,5 @@ app.post("/analyze", async (req, res) => {
 
 const PORT = Number(process.env.PORT ?? 8000);
 app.listen(PORT, () => {
-  console.log(`PhishGuard AI backend listening on http://localhost:${PORT}`);
+  console.log(`CatPhish AI backend listening on http://localhost:${PORT}`);
 });

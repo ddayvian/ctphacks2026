@@ -1,10 +1,18 @@
 .phishguard-banner {
   font-family: system-ui, sans-serif;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
   border-radius: 8px;
   padding: 10px 14px;
   margin: 8px 0;
   border: 1px solid transparent;
+}
+
+.phishguard-loading {
+  background: #f0f2f5;
+  border-color: #8c959f;
+  color: #424a53;
+  font-style: italic;
 }
 
 .phishguard-safe {
@@ -25,47 +33,40 @@
   color: #a40e26;
 }
 
+.phishguard-error {
+  background: #f0f2f5;
+  border-color: #8c959f;
+  color: #57606a;
+  font-style: italic;
+  font-weight: 400;
+}
+
 .phishguard-header {
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 15px;
   margin-bottom: 4px;
 }
 
-.phishguard-findings {
-  margin: 4px 0 0;
-  padding-left: 18px;
-}
-
-.phishguard-finding {
-  margin-bottom: 2px;
-}
-
-.phishguard-ai-section {
-  margin-top: 8px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-  font-size: 12px;
-}
-
-.phishguard-ai-safe {
-  color: #116329;
-}
-
-.phishguard-ai-suspicious {
-  color: #7d5700;
-}
-
-.phishguard-ai-dangerous {
-  color: #a40e26;
+.phishguard-explanation {
   font-weight: 600;
 }
 
-.phishguard-ai-error {
-  color: #57606a;
-  font-style: italic;
+/* Per-link risk highlighting, colored by the AI's verdict for that link. */
+.phishguard-link-safe {
+  background-color: #dafbe1 !important;
+  border-bottom: 2px solid #1a7f37 !important;
+  border-radius: 2px;
 }
 
-.phishguard-flagged-link {
+.phishguard-link-suspicious {
+  background-color: #fff8c5 !important;
+  border-bottom: 2px solid #9a6700 !important;
+  border-radius: 2px;
+}
+
+.phishguard-link-dangerous {
   background-color: #ffcecb !important;
   border-bottom: 2px solid #cf222e !important;
   border-radius: 2px;
+  font-weight: 700;
 }

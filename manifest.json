@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "PhishGuard",
+  "name": "CatPhish",
   "version": "0.1.0",
-  "description": "Highlights phishing risk signals in Gmail directly in your browser — no data leaves your machine.",
+  "description": "Uses AI to highlight phishing risk signals and suspicious links directly in Gmail and Outlook.",
   "permissions": ["storage"],
   "host_permissions": ["http://localhost:8000/*"],
   "action": {
@@ -22,6 +22,17 @@
       "js": ["dist/content.js"],
       "css": ["src/content.css"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://outlook.live.com/*",
+        "https://outlook.office.com/*",
+        "https://outlook.office365.com/*"
+      ],
+      "js": ["dist/content.js"],
+      "css": ["src/content.css"],
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ]
 }

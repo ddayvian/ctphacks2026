@@ -1,11 +1,11 @@
-import { AnalysisResult } from "./types";
+import { StoredAnalysis } from "./types";
 
-function render(result: AnalysisResult | undefined): void {
+function render(result: StoredAnalysis | undefined): void {
   const el = document.getElementById("content");
   if (!el) return;
 
   if (!result) {
-    el.innerHTML = '<p class="empty">Open an email in Gmail to see its risk analysis.</p>';
+    el.innerHTML = '<p class="empty">Open an email in Gmail to see its AI risk analysis.</p>';
     return;
   }
 
@@ -15,14 +15,17 @@ function render(result: AnalysisResult | undefined): void {
     dangerous: "⛔ Likely phishing",
   }[result.verdict];
 
-  const findingsHtml = result.findings.length
-    ? `<ul>${result.findings.map((f) => `<li>${escapeHtml(f.label)}</li>`).join("")}</ul>`
-    : '<p class="empty">No issues found.</p>';
+  const linksHtml = result.flaggedLinks.length
+    ? `<ul>${result.flaggedLinks
+        .map((f) => `<li class="link-${f.verdict}">${escapeHtml(f.href)}</li>`)
+        .join("")}</ul>`
+    : '<p class="empty">No links in this email.</p>';
 
   el.innerHTML = `
     <div class="verdict ${result.verdict}">${verdictLabel} — ${result.score}/100</div>
     <div class="meta">${escapeHtml(result.senderEmail)}<br/>${escapeHtml(result.subject)}</div>
-    ${findingsHtml}
+    <p class="explanation">${escapeHtml(result.explanation)}</p>
+    ${linksHtml}
   `;
 }
 
@@ -33,5 +36,5 @@ function escapeHtml(input: string): string {
 }
 
 chrome.storage.local.get("lastResult", (data) => {
-  render(data.lastResult as AnalysisResult | undefined);
+  render(data.lastResult as StoredAnalysis | undefined);
 });

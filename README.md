@@ -1,8 +1,8 @@
-# PhishGuard
+# CatPhish
 
-Chrome extension that scans open Gmail messages for phishing signals and
-highlights risky senders/links directly in the page. Combines instant
-client-side rule checks with an optional AI second opinion from Gemini.
+Chrome extension that scans open Gmail and Outlook Web messages for phishing
+signals using Gemini, and highlights the email and its individual links
+directly in the page based on the AI's verdict.
 
 ## Setup
 
@@ -14,7 +14,7 @@ npm run build      # one-off build
 npm run watch       # rebuild on change
 ```
 
-### Backend (optional — powers the AI analysis)
+### Backend (required — powers all analysis)
 
 ```bash
 cd backend
@@ -23,49 +23,55 @@ cp .env.example .env   # then fill in GEMINI_API_KEY (get one at aistudio.google
 npm run dev             # runs on http://localhost:8000
 ```
 
-The extension works without the backend running — you just won't see the
-AI analysis line, and the rule-based banner still renders instantly.
+The extension has no local fallback — the backend must be running for any
+analysis to appear. Without it, the banner shows "AI analysis unavailable."
 
 ## Load in Chrome
 
 1. Go to `chrome://extensions`
 2. Enable "Developer mode" (top right)
 3. Click "Load unpacked" and select this project's root folder
-4. Open Gmail (`mail.google.com`) and open any email
+4. Open Gmail (`mail.google.com`) or Outlook Web (`outlook.office.com` /
+   `outlook.live.com` / `outlook.office365.com`) and open any email
 
-## What it checks
+## What it does
 
-**Rule-based (instant, always on):**
-- Sender display name impersonating a known brand
-- Reply-To domain differing from the From domain
-- Lookalike/typosquatted sender or link domains (edit-distance vs. known brands)
-- Urgency/pressure language in the body
-- Link text that doesn't match its actual destination
-- Links to raw IP addresses, punycode domains, URL shorteners, HTTP (non-HTTPS),
-  or unusually long subdomain chains
-
-**AI-based (async, requires the backend):**
-- Gemini reads the full email content and gives an independent verdict + score
-  + one-line explanation, shown as a second line under the rule-based banner
+- Extracts sender, subject, body, and links from the open email and sends
+  them to the backend
+- Gemini returns an overall verdict (safe / suspicious / dangerous) + score
+  + explanation, **and** a per-link verdict for every link in the email
+- The banner above the email shows the overall verdict, bolded
+- Each link is highlighted in the page itself, colored by its own verdict —
+  green (safe), yellow (suspicious), red (dangerous) — with the AI's reason
+  in the link's tooltip
 
 ## Project layout
 
-- `src/rules.ts` — detection rules, produces `RuleFinding[]`
-- `src/scorer.ts` — combines findings into a 0–100 score + verdict
-- `src/extractor.ts` — reads sender/subject/body/links from Gmail's DOM
-- `src/highlighter.ts` — injects the risk banner, AI section, and link highlights
-- `src/content.ts` — orchestrates extraction → scoring → rendering → AI request,
-  watches for Gmail's SPA navigation via `MutationObserver`
+- `src/extractor.ts` — detects which mail client is open (by hostname) and
+  dispatches to the matching extractor
+- `src/extractors/gmail.ts` — reads sender/subject/body/links from Gmail's DOM
+- `src/extractors/outlook.ts` — same, for Outlook Web's DOM
+- `src/highlighter.ts` — renders the AI verdict banner and colors each link
+  by its own flagged verdict
+- `src/content.ts` — orchestrates extraction → AI request → rendering,
+  watches for SPA navigation via `MutationObserver`
 - `src/background.ts` — service worker; proxies the AI request to the backend
 - `src/popup.ts` / `popup.html` — toolbar popup showing the last analysis
 - `backend/src/server.ts` — single-endpoint Express server that calls the
-  Gemini API and returns a structured verdict
+  Gemini API and returns the structured verdict + per-link classifications
 
-## Notes / known limits (MVP scope)
+## Notes / known limits
 
-- Selectors (`span.gD`, `h2.hP`, `div.a3s`) target Gmail's current web UI;
-  Gmail can change these without notice.
-- Reply-To isn't exposed in Gmail's default view, so that check only fires
-  when it can be read from the DOM.
+- Gmail selectors (`span.gD`, `h2.hP`, `div.a3s`) target Gmail's current web
+  UI; Gmail can change these without notice.
+- Outlook Web has no equivalently stable, documented selectors — it's a
+  frequently-changing React app. `src/extractors/outlook.ts` uses layered
+  fallbacks (mailto links, title/aria-label email scanning) rather than one
+  exact selector, but it hasn't been verified against a live Outlook mailbox.
+  If it doesn't detect an open email, that's the first place to check —
+  inspect the reading pane's DOM and adjust the selectors there.
 - The backend is meant for local demo use — CORS is wide open and there's no
   auth in front of it. Don't deploy it publicly as-is.
+- Gemini's free tier has a small daily request quota per model. The backend
+  retries transient errors and falls back from `gemini-flash-latest` to
+  `gemini-flash-lite-latest` (a separate quota pool) automatically.

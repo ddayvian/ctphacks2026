@@ -1,5 +1,5 @@
 {
-  "name": "phish-guard",
+  "name": "catphish",
   "version": "0.1.0",
   "private": true,
   "description": "Client-side phishing email detector extension",

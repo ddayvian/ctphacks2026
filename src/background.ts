@@ -3,7 +3,7 @@ import { AnalyzeAiMessage, AnalyzeAiResponse } from "./types";
 const BACKEND_URL = "http://localhost:8000";
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log("PhishGuard installed");
+  console.log("CatPhish installed");
 });
 
 chrome.runtime.onMessage.addListener((message: AnalyzeAiMessage, _sender, sendResponse) => {

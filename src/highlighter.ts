@@ -1,83 +1,66 @@
-import { AiAnalysis, AnalysisResult } from "./types";
+import { AiAnalysis, FlaggedLink } from "./types";
 
 const BANNER_ID = "phishguard-banner";
-const AI_SECTION_ID = "phishguard-ai-section";
 
-const VERDICT_LABEL: Record<AnalysisResult["verdict"], string> = {
+const VERDICT_LABEL: Record<AiAnalysis["verdict"], string> = {
   safe: "✓ Looks safe",
   suspicious: "⚠ Suspicious email",
   dangerous: "⛔ Likely phishing",
 };
 
-function buildBanner(result: AnalysisResult): HTMLElement {
-  const banner = document.createElement("div");
-  banner.id = BANNER_ID;
-  banner.className = `phishguard-banner phishguard-${result.verdict}`;
-
-  const header = document.createElement("div");
-  header.className = "phishguard-header";
-  header.textContent = `${VERDICT_LABEL[result.verdict]} — risk score ${result.score}/100`;
-  banner.appendChild(header);
-
-  if (result.findings.length > 0) {
-    const list = document.createElement("ul");
-    list.className = "phishguard-findings";
-    for (const finding of result.findings) {
-      const item = document.createElement("li");
-      item.className = `phishguard-finding phishguard-severity-${finding.severity}`;
-      item.textContent = `${finding.label} — ${finding.detail}`;
-      list.appendChild(item);
-    }
-    banner.appendChild(list);
+function getOrCreateBanner(bodyEl: HTMLElement): HTMLElement {
+  let banner = document.getElementById(BANNER_ID);
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = BANNER_ID;
+    bodyEl.parentElement?.insertBefore(banner, bodyEl);
   }
-
   return banner;
 }
 
-export function renderBanner(bodyEl: HTMLElement, result: AnalysisResult): void {
-  document.getElementById(BANNER_ID)?.remove();
-  const banner = buildBanner(result);
-  bodyEl.parentElement?.insertBefore(banner, bodyEl);
+export function renderAiLoading(bodyEl: HTMLElement): void {
+  const banner = getOrCreateBanner(bodyEl);
+  banner.className = "phishguard-banner phishguard-loading";
+  banner.textContent = "🤖 CatPhish: analyzing with AI...";
 }
 
-function getAiSection(): HTMLElement | null {
-  return document.getElementById(AI_SECTION_ID);
+export function renderAiResult(bodyEl: HTMLElement, result: AiAnalysis): void {
+  const banner = getOrCreateBanner(bodyEl);
+  banner.className = `phishguard-banner phishguard-${result.verdict}`;
+  banner.innerHTML = "";
+
+  const header = document.createElement("div");
+  header.className = "phishguard-header";
+  header.textContent = `${VERDICT_LABEL[result.verdict]} — AI risk score ${result.score}/100`;
+  banner.appendChild(header);
+
+  const explanation = document.createElement("div");
+  explanation.className = "phishguard-explanation";
+  explanation.textContent = result.explanation;
+  banner.appendChild(explanation);
 }
 
-export function renderAiLoading(): void {
-  const banner = document.getElementById(BANNER_ID);
-  if (!banner) return;
-
-  let section = getAiSection();
-  if (!section) {
-    section = document.createElement("div");
-    section.id = AI_SECTION_ID;
-    section.className = "phishguard-ai-section";
-    banner.appendChild(section);
-  }
-  section.textContent = "🤖 AI analysis: checking...";
+export function renderAiError(bodyEl: HTMLElement, message: string): void {
+  const banner = getOrCreateBanner(bodyEl);
+  banner.className = "phishguard-banner phishguard-error";
+  banner.textContent = `🤖 CatPhish: AI analysis unavailable — ${message}`;
 }
 
-export function renderAiResult(result: AiAnalysis): void {
-  const section = getAiSection();
-  if (!section) return;
-  section.textContent = `🤖 AI analysis: ${result.verdict} (${result.score}/100) — ${result.explanation}`;
-  section.className = `phishguard-ai-section phishguard-ai-${result.verdict}`;
-}
+export function highlightLinks(bodyEl: HTMLElement, flaggedLinks: FlaggedLink[]): void {
+  const verdictByHref = new Map(flaggedLinks.map((f) => [f.href, f]));
 
-export function renderAiError(message: string): void {
-  const section = getAiSection();
-  if (!section) return;
-  section.textContent = `🤖 AI analysis unavailable: ${message}`;
-  section.className = "phishguard-ai-section phishguard-ai-error";
-}
-
-export function highlightLinks(bodyEl: HTMLElement, flaggedHrefs: Set<string>): void {
   bodyEl.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((a) => {
-    a.classList.remove("phishguard-flagged-link");
-    if (flaggedHrefs.has(a.getAttribute("href") ?? "")) {
-      a.classList.add("phishguard-flagged-link");
-      a.title = "PhishGuard: this link looks suspicious";
-    }
+    a.classList.remove(
+      "phishguard-link-safe",
+      "phishguard-link-suspicious",
+      "phishguard-link-dangerous"
+    );
+    a.removeAttribute("title");
+
+    const flag = verdictByHref.get(a.getAttribute("href") ?? "");
+    if (!flag) return;
+
+    a.classList.add(`phishguard-link-${flag.verdict}`);
+    a.title = `CatPhish: ${flag.verdict} — ${flag.reason}`;
   });
 }

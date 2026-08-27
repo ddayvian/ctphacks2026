@@ -1,42 +1,40 @@
-import { EmailData, EmailLink } from "./types";
+import { EmailData } from "./types";
+import { findGmailBody, extractGmailEmail } from "./extractors/gmail";
+import { findOutlookBody, extractOutlookEmail } from "./extractors/outlook";
 
-// Gmail's DOM uses unstable, obfuscated class names, but these have been
-// stable identifiers across Gmail's web UI for a long time.
-const SENDER_SELECTOR = "span.gD";
-const SUBJECT_SELECTOR = "h2.hP";
-const BODY_SELECTOR = "div.a3s";
+type MailClient = "gmail" | "outlook" | "unknown";
+
+function detectClient(): MailClient {
+  const host = location.hostname;
+  if (host === "mail.google.com") return "gmail";
+  if (
+    host.endsWith("outlook.live.com") ||
+    host.endsWith("outlook.office.com") ||
+    host.endsWith("outlook.office365.com")
+  ) {
+    return "outlook";
+  }
+  return "unknown";
+}
 
 export function findOpenMessageBody(): HTMLElement | null {
-  return document.querySelector(BODY_SELECTOR);
+  switch (detectClient()) {
+    case "gmail":
+      return findGmailBody();
+    case "outlook":
+      return findOutlookBody();
+    default:
+      return null;
+  }
 }
 
 export function extractOpenEmail(): EmailData | null {
-  const senderEl = document.querySelector<HTMLElement>(SENDER_SELECTOR);
-  const subjectEl = document.querySelector<HTMLElement>(SUBJECT_SELECTOR);
-  const bodyEl = findOpenMessageBody();
-
-  if (!senderEl || !bodyEl) return null;
-
-  const senderEmail = senderEl.getAttribute("email") ?? "";
-  const senderName = senderEl.getAttribute("name") ?? senderEl.textContent ?? "";
-  const subject = subjectEl?.textContent?.trim() ?? "";
-  const bodyText = bodyEl.textContent ?? "";
-
-  const links: EmailLink[] = Array.from(bodyEl.querySelectorAll("a[href]"))
-    .map((a) => ({
-      text: a.textContent?.trim() ?? "",
-      href: a.getAttribute("href") ?? "",
-    }))
-    .filter((link) => link.href.startsWith("http"));
-
-  if (!senderEmail) return null;
-
-  return {
-    senderName: senderName.trim(),
-    senderEmail: senderEmail.trim(),
-    replyTo: null,
-    subject,
-    bodyText,
-    links,
-  };
+  switch (detectClient()) {
+    case "gmail":
+      return extractGmailEmail();
+    case "outlook":
+      return extractOutlookEmail();
+    default:
+      return null;
+  }
 }

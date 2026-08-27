@@ -26,13 +26,18 @@ npm run dev             # runs on http://localhost:8000
 The extension has no local fallback — the backend must be running for any
 analysis to appear. Without it, the banner shows "AI analysis unavailable."
 
+> **Note:** `backend/.env` is gitignored and never committed — API keys are
+> never shared through this repo. Everyone who runs CatPhish uses their own
+> free Gemini key (a few minutes to get one, no cost on the free tier).
+
 ## Load in Chrome
 
 1. Go to `chrome://extensions`
 2. Enable "Developer mode" (top right)
 3. Click "Load unpacked" and select this project's root folder
 4. Open Gmail (`mail.google.com`) or Outlook Web (`outlook.office.com` /
-   `outlook.live.com` / `outlook.office365.com`) and open any email
+   `outlook.live.com` / `outlook.office365.com` / `outlook.cloud.microsoft`)
+   and open any email
 
 ## What it does
 
@@ -66,9 +71,12 @@ analysis to appear. Without it, the banner shows "AI analysis unavailable."
   UI; Gmail can change these without notice.
 - Outlook Web has no equivalently stable, documented selectors — it's a
   frequently-changing React app. `src/extractors/outlook.ts` uses layered
-  fallbacks (mailto links, title/aria-label email scanning) rather than one
-  exact selector, but it hasn't been verified against a live Outlook mailbox.
-  If it doesn't detect an open email, that's the first place to check —
+  fallbacks (verified against a live mailbox on `outlook.cloud.microsoft`):
+  body via `[data-test-id="MessageBodyContainer"]`, sender name via the
+  persona-card's `aria-label="From: ..."` (the email address itself is often
+  not in the DOM at all — Outlook loads it lazily behind a LivePersonaCard —
+  so analysis proceeds on the display name alone when that happens). If a
+  future Outlook redesign breaks this, that's the first place to check —
   inspect the reading pane's DOM and adjust the selectors there.
 - The backend is meant for local demo use — CORS is wide open and there's no
   auth in front of it. Don't deploy it publicly as-is.

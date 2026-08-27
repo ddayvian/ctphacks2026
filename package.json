@@ -1,0 +1,15 @@
+{
+  "name": "phish-guard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Client-side phishing email detector extension",
+  "scripts": {
+    "build": "node esbuild.config.js",
+    "watch": "node esbuild.config.js --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.23.0",
+    "typescript": "^5.5.0",
+    "@types/chrome": "^0.0.270"
+  }
+}

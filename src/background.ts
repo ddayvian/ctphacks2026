@@ -1,5 +1,7 @@
 import { AnalyzeAiMessage, AnalyzeAiResponse } from "./types";
 
+// Update this after deploying (see README § Deploying the backend), and add
+// the matching URL to manifest.json's host_permissions.
 const BACKEND_URL = "http://localhost:8000";
 
 chrome.runtime.onInstalled.addListener(() => {

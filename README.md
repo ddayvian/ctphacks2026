@@ -30,6 +30,26 @@ analysis to appear. Without it, the banner shows "AI analysis unavailable."
 > never shared through this repo. Everyone who runs CatPhish uses their own
 > free Gemini key (a few minutes to get one, no cost on the free tier).
 
+### Deploying the backend (optional — for demos without localhost)
+
+A `render.yaml` blueprint is included so judges/viewers don't need to run
+the backend locally:
+
+1. Push this repo to GitHub (already done if you're reading this from there)
+2. Go to [dashboard.render.com](https://dashboard.render.com) → **New** →
+   **Blueprint**, connect this repo — Render reads `render.yaml`
+   automatically
+3. When prompted, paste your `GEMINI_API_KEY` (stored as a Render secret,
+   never in the repo)
+4. Deploy — Render gives you a URL like
+   `https://catphish-backend-xxxx.onrender.com`
+5. Update `BACKEND_URL` in `src/background.ts` and the matching entry in
+   `manifest.json`'s `host_permissions` to that URL, then `npm run build`
+   and reload the extension
+
+Free-tier Render services spin down after inactivity, so the first request
+after idling can take ~30s to wake up — expected, not a bug.
+
 ## Load in Chrome
 
 1. Go to `chrome://extensions`
@@ -78,8 +98,9 @@ analysis to appear. Without it, the banner shows "AI analysis unavailable."
   so analysis proceeds on the display name alone when that happens). If a
   future Outlook redesign breaks this, that's the first place to check —
   inspect the reading pane's DOM and adjust the selectors there.
-- The backend is meant for local demo use — CORS is wide open and there's no
-  auth in front of it. Don't deploy it publicly as-is.
+- CORS is wide open and there's no auth in front of the backend — fine for a
+  scoped demo deployment you control and can take down afterward, but don't
+  leave it running publicly long-term without adding rate-limiting/auth.
 - Gemini's free tier has a small daily request quota per model. The backend
   retries transient errors and falls back from `gemini-flash-latest` to
   `gemini-flash-lite-latest` (a separate quota pool) automatically.
